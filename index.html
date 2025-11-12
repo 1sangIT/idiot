@@ -9,7 +9,7 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #1a1a1a; /* 원작 느낌의 어두운 배경 */
+            background-color: #1a1a1a;
             color: white;
             display: flex;
             justify-content: center;
@@ -32,7 +32,6 @@
             position: relative;
         }
 
-        /* 깜빡이는 효과 (원작 고증) */
         @keyframes flash-border {
             0%, 100% { border-color: #ffffff; }
             50% { border-color: #000000; }
@@ -61,7 +60,7 @@
             display: flex;
             gap: 8px;
             justify-content: flex-end;
-            flex-grow: 1;
+            flex-grow: 1; /* This pushes buttons to the right */
         }
 
         .score-board {
@@ -88,6 +87,12 @@
         #score { color: #f1c40f; }
         #time { color: #3498db; }
 
+        /* --- [수정] 버튼들을 묶는 컨테이너 --- */
+        .button-container {
+            display: flex;
+            gap: 5px; /* 버튼 사이 간격 */
+        }
+
         #reset-btn {
             background-color: #fff;
             color: black;
@@ -97,8 +102,25 @@
             font-weight: 700;
             cursor: pointer;
             font-size: 0.8rem;
+            height: 34px; /* 높이 고정 */
         }
         #reset-btn:hover { background-color: #ddd; }
+
+        /* --- [추가] 볼륨 버튼 스타일 --- */
+        #volume-btn {
+            background-color: #fff;
+            color: black;
+            border: 2px solid black;
+            padding: 6px 8px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 1rem; /* 아이콘 크기 */
+            line-height: 1;
+            height: 34px; /* 높이 통일 */
+            width: 34px; /* 정사각형 */
+        }
+        #volume-btn:hover { background-color: #ddd; }
 
         #game-board {
             display: grid;
@@ -118,7 +140,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background-color: #fff; /* 기본 흰색 배경 */
+            background-color: #fff;
             border-radius: 4px;
             cursor: pointer;
             transition: transform 0.1s;
@@ -126,7 +148,6 @@
             position: relative;
         }
         
-        /* SVG 스타일링 */
         .tile svg {
             width: 85%;
             height: 85%;
@@ -134,7 +155,7 @@
         }
 
         .tile.selected {
-            background-color: #ff00ff; /* 선택 시 현란한 색 */
+            background-color: #ff00ff;
             animation: flash-bg 0.2s infinite;
         }
 
@@ -148,7 +169,6 @@
             animation: pop 0.5s ease forwards;
         }
 
-        /* HAHAHA 텍스트 효과 */
         .haha-effect {
             position: absolute;
             color: red;
@@ -171,7 +191,6 @@
             100% { transform: scale(0); opacity: 0; }
         }
 
-        /* 아이템 버튼 스타일 */
         .item-container {
             margin-top: 15px;
             width: 100%;
@@ -204,7 +223,6 @@
             animation: none;
         }
 
-        /* 메시지 오버레이 */
         #message-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -262,7 +280,11 @@
                     <span id="score">0</span>
                 </div>
             </div>
-            <button id="reset-btn">RESET</button>
+            <!-- --- [수정] 버튼 컨테이너 --- -->
+            <div class="button-container">
+                <button id="volume-btn">🔊</button> <!-- 볼륨 버튼 -->
+                <button id="reset-btn">RESET</button> <!-- 리셋 버튼 -->
+            </div>
         </div>
         
         <div id="game-board"></div>
@@ -280,42 +302,23 @@
         </div>
     </div>
 
-    <!-- === [추가] 배경 음악 === -->
-    <!-- 
-      1. 이 HTML 파일과 *같은 폴더*에 mp3 파일을 업로드하세요.
-      2. "your_music.mp3" 부분을 실제 파일명으로 정확히 변경하세요.
-      3. loop: 음악을 무한 반복합니다.
-      4. preload="auto": 페이지 로드 시 음악 파일을 미리 불러옵니다.
-    -->
+    <!-- 배경 음악 (Pandemonium.mp3) -->
     <audio id="bg-music" src="Pandemonium.mp3" loop preload="auto"></audio>
-    <!-- === [추가] 끝 === -->
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const ROWS = 8;
             const COLS = 8;
-            const SCORE_PER_MATCH = 100; // 점수 단위 상승
+            const SCORE_PER_MATCH = 100;
             const GAME_TIME_SECONDS = 60;
 
             // --- SVG Assets: The "Idiot" Faces ---
-            // 밈 특유의 대충 그린듯한 그림체 구현
             const FACE_SVGS = [
-                // 1. Classic (White face, black stroke)
                 `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="white" stroke="black" stroke-width="5"/><circle cx="35" cy="35" r="5" fill="black"/><circle cx="65" cy="35" r="5" fill="black"/><path d="M 30 65 Q 50 85 70 65" stroke="black" stroke-width="5" fill="none"/></svg>`,
-                
-                // 2. Inverted (Black face, white stroke)
                 `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="black" stroke="white" stroke-width="5"/><circle cx="35" cy="35" r="5" fill="white"/><circle cx="65" cy="35" r="5" fill="white"/><path d="M 30 65 Q 50 85 70 65" stroke="white" stroke-width="5" fill="none"/></svg>`,
-                
-                // 3. Singing/Open Mouth (White face)
                 `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="white" stroke="black" stroke-width="5"/><circle cx="35" cy="35" r="5" fill="black"/><circle cx="65" cy="35" r="5" fill="black"/><ellipse cx="50" cy="70" rx="15" ry="10" fill="black"/></svg>`,
-                
-                // 4. Singing Inverted (Black face)
                 `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="black" stroke="white" stroke-width="5"/><circle cx="35" cy="35" r="5" fill="white"/><circle cx="65" cy="35" r="5" fill="white"/><ellipse cx="50" cy="70" rx="15" ry="10" fill="white"/></svg>`,
-
-                // 5. Dead/X-Eyes (White face)
                 `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="white" stroke="black" stroke-width="5"/><path d="M 25 25 L 45 45 M 45 25 L 25 45" stroke="black" stroke-width="4"/><path d="M 55 25 L 75 45 M 75 25 L 55 45" stroke="black" stroke-width="4"/><path d="M 30 70 Q 50 60 70 70" stroke="black" stroke-width="5" fill="none"/></svg>`,
-
-                // 6. Angry/Red (Red face)
                 `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#ff3333" stroke="black" stroke-width="5"/><path d="M 30 30 L 45 40" stroke="black" stroke-width="4"/><path d="M 70 30 L 55 40" stroke="black" stroke-width="4"/><circle cx="35" cy="45" r="4" fill="black"/><circle cx="65" cy="45" r="4" fill="black"/><path d="M 35 75 Q 50 65 65 75" stroke="black" stroke-width="5" fill="none"/></svg>`
             ];
 
@@ -329,25 +332,34 @@
             const closeMessageBtn = document.getElementById('close-message');
             const bombBtn = document.getElementById('bomb-btn');
 
-            // === [추가] 음악 재생 로직 ===
+            // --- [수정] 음악 및 볼륨 버튼 요소 가져오기 ---
             const bgMusic = document.getElementById('bg-music');
+            const volumeBtn = document.getElementById('volume-btn');
 
             function startMusicOnClick() {
-                // play()는 사용자의 상호작용(클릭)이 있어야만 성공합니다.
-                // 이 함수는 '첫 클릭'에만 호출되므로 성공할 것입니다.
                 if (bgMusic) {
                     bgMusic.play().catch(e => console.log("음악 재생이 차단되었습니다:", e));
                 }
             }
             
-            // 'once: true' 옵션이 핵심입니다.
-            // body(페이지 전체)에서 'click' 이벤트가 *단 한 번* 발생하면
-            // startMusicOnClick 함수를 실행하고, 그 후 이 리스너는 자동 제거됩니다.
             document.body.addEventListener('click', startMusicOnClick, { once: true });
-            // === [추가] 끝 ===
+            
+            // --- [추가] 볼륨 버튼 클릭 이벤트 ---
+            volumeBtn.addEventListener('click', () => {
+                if (bgMusic.muted) {
+                    // 음소거 해제
+                    bgMusic.muted = false;
+                    volumeBtn.textContent = '🔊';
+                } else {
+                    // 음소거
+                    bgMusic.muted = true;
+                    volumeBtn.textContent = '🔇';
+                }
+            });
+            // --- [추가] 끝 ---
 
 
-            let board = []; // Stores indices (0-5) now, not emojis
+            let board = [];
             let score = 0;
             let timerId = null;
             let remainingTime = GAME_TIME_SECONDS;
@@ -361,7 +373,7 @@
             function getRandomType() { return Math.floor(Math.random() * FACE_SVGS.length); }
 
             function showMessage(title, text) {
-                messageTitle.innerHTML = title; // HTML 허용 (줄바꿈 등)
+                messageTitle.innerHTML = title;
                 messageText.innerHTML = text;
                 messageOverlay.style.display = 'flex';
             }
@@ -397,7 +409,6 @@
                 timeDisplay.textContent = remainingTime;
                 if (remainingTime <= 10) timeDisplay.style.color = 'red';
                 
-                // 배경 깜빡임 효과 (시간 얼마 안 남았을 때)
                 if (remainingTime <= 10 && remainingTime > 0) {
                     document.body.style.backgroundColor = (remainingTime % 2 === 0) ? '#1a1a1a' : '#330000';
                 } else if (remainingTime <= 0) {
@@ -424,7 +435,6 @@
                     }
                     board.push(row);
                 }
-                // 초기 매치 제거
                 let matches = findMatches();
                 while (matches.length > 0) {
                     removeMatchesFromBoard(matches);
@@ -447,7 +457,6 @@
                         if (typeIdx !== null && typeIdx !== -1) {
                             tile.innerHTML = FACE_SVGS[typeIdx];
                             
-                            // 반전된 얼굴(인덱스 1, 3, 5 등)은 배경을 검게 처리하여 대비 효과
                             if (typeIdx === 1 || typeIdx === 3) {
                                 tile.style.backgroundColor = 'black';
                             } else if (typeIdx === 5) {
@@ -474,7 +483,6 @@
 
                 if (board[r][c] === null) return;
 
-                // 폭탄 로직
                 if (isBombActive) {
                     isBombActive = false;
                     bombBtn.classList.remove('active');
@@ -512,7 +520,6 @@
                 isProcessing = true;
                 updateBombButton();
 
-                // Swap logic
                 let temp = board[r1][c1];
                 board[r1][c1] = board[r2][c2];
                 board[r2][c2] = temp;
@@ -524,7 +531,6 @@
                 if (matches.length > 0) {
                     await handleMatches(matches);
                 } else {
-                    // Undo swap
                     temp = board[r1][c1];
                     board[r1][c1] = board[r2][c2];
                     board[r2][c2] = temp;
@@ -556,13 +562,11 @@
                     score += matches.length * SCORE_PER_MATCH;
                     scoreDisplay.textContent = score;
 
-                    // Show HAHAHA effect on match center
                     if (matches.length > 0) {
                          const center = matches[Math.floor(matches.length/2)];
                          showHahaEffect(center.r, center.c);
                     }
 
-                    // Remove logic
                     for (let m of matches) {
                         const tile = document.querySelector(`.tile[data-row="${m.r}"][data-col="${m.c}"]`);
                         if (tile) tile.classList.add('matched');
@@ -571,11 +575,11 @@
 
                     removeMatchesFromBoard(matches);
                     shiftDown();
-                    renderBoard(); // Render after shift to show empty top
+                    renderBoard();
                     await sleep(200);
                     
                     fillBoard();
-                    renderBoard(); // Render new items
+                    renderBoard();
                     await sleep(200);
 
                     matches = findMatches();
@@ -591,7 +595,6 @@
                 haha.classList.add('haha-effect');
                 tile.appendChild(haha);
                 
-                // Clean up DOM
                 setTimeout(() => { if(haha.parentNode) haha.parentNode.removeChild(haha); }, 1000);
             }
 
