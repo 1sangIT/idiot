@@ -87,7 +87,6 @@
         #score { color: #f1c40f; }
         #time { color: #3498db; }
 
-        /* --- [수정] 버튼들을 묶는 컨테이너 --- */
         .button-container {
             display: flex;
             gap: 5px; /* 버튼 사이 간격 */
@@ -106,7 +105,6 @@
         }
         #reset-btn:hover { background-color: #ddd; }
 
-        /* --- [추가] 볼륨 버튼 스타일 --- */
         #volume-btn {
             background-color: #fff;
             color: black;
@@ -227,7 +225,7 @@
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.85);
-            display: none;
+            display: none; /* 시작 시 flex로 변경됨 */
             justify-content: center;
             align-items: center;
             z-index: 100;
@@ -249,6 +247,24 @@
             font-weight: 900;
         }
 
+        /* --- [수정] 시작/재시작 버튼 스타일 --- */
+        #start-game-btn {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: black;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            text-transform: uppercase;
+            border: 2px solid white;
+        }
+        #start-game-btn:hover {
+            background: #444;
+        }
+
+
         @keyframes shake {
             0% { transform: translate(1px, 1px) rotate(0deg); }
             10% { transform: translate(-1px, -2px) rotate(-1deg); }
@@ -261,6 +277,17 @@
             80% { transform: translate(-1px, -1px) rotate(1deg); }
             90% { transform: translate(1px, 2px) rotate(0deg); }
             100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        #time.bonus {
+            color: #2ecc71 !important; /* 녹색 */
+            animation: pulse 0.5s;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
         }
 
     </style>
@@ -280,10 +307,9 @@
                     <span id="score">0</span>
                 </div>
             </div>
-            <!-- --- [수정] 버튼 컨테이너 --- -->
             <div class="button-container">
-                <button id="volume-btn">🔊</button> <!-- 볼륨 버튼 -->
-                <button id="reset-btn">RESET</button> <!-- 리셋 버튼 -->
+                <button id="volume-btn">🔊</button>
+                <button id="reset-btn">RESET</button>
             </div>
         </div>
         
@@ -295,14 +321,13 @@
 
         <div id="message-overlay">
             <div class="message-box">
-                <h2 id="message-title">HAHAHA</h2>
-                <p id="message-text">YOU ARE AN IDIOT!</p>
-                <button id="close-message" style="margin-top:15px; padding:10px 20px; background:black; color:white; border:none; font-weight:bold; cursor:pointer;">CLOSE</button>
+                <h2 id="message-title">ARE YOU AN IDIOT?</h2>
+                <p id="message-text">PRESS START TO PROVE IT.</p>
+                <button id="start-game-btn">START GAME</button>
             </div>
         </div>
     </div>
 
-    <!-- 배경 음악 (Pandemonium.mp3) -->
     <audio id="bg-music" src="Pandemonium.mp3" loop preload="auto"></audio>
 
     <script>
@@ -312,7 +337,6 @@
             const SCORE_PER_MATCH = 100;
             const GAME_TIME_SECONDS = 60;
 
-            // --- SVG Assets: The "Idiot" Faces ---
             const FACE_SVGS = [
                 `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="white" stroke="black" stroke-width="5"/><circle cx="35" cy="35" r="5" fill="black"/><circle cx="65" cy="35" r="5" fill="black"/><path d="M 30 65 Q 50 85 70 65" stroke="black" stroke-width="5" fill="none"/></svg>`,
                 `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="black" stroke="white" stroke-width="5"/><circle cx="35" cy="35" r="5" fill="white"/><circle cx="65" cy="35" r="5" fill="white"/><path d="M 30 65 Q 50 85 70 65" stroke="white" stroke-width="5" fill="none"/></svg>`,
@@ -329,79 +353,93 @@
             const messageOverlay = document.getElementById('message-overlay');
             const messageTitle = document.getElementById('message-title');
             const messageText = document.getElementById('message-text');
-            const closeMessageBtn = document.getElementById('close-message');
+            const startGameBtn = document.getElementById('start-game-btn'); // [수정]
             const bombBtn = document.getElementById('bomb-btn');
 
-            // --- [수정] 음악 및 볼륨 버튼 요소 가져오기 ---
             const bgMusic = document.getElementById('bg-music');
             const volumeBtn = document.getElementById('volume-btn');
 
+            let musicStarted = false; // [추가] 음악 시작 여부
+            
             function startMusicOnClick() {
-                if (bgMusic) {
+                if (bgMusic && !musicStarted) { // [수정] musicStarted 플래그 확인
                     bgMusic.play().catch(e => console.log("음악 재생이 차단되었습니다:", e));
+                    musicStarted = true; // [추가] 한 번 재생되면 플래그 설정
                 }
             }
             
-            document.body.addEventListener('click', startMusicOnClick, { once: true });
+            // [수정] body 대신 window에 'click' 또는 'touchstart' 이벤트를 한 번만 등록
+            window.addEventListener('click', startMusicOnClick, { once: true });
+            window.addEventListener('touchstart', startMusicOnClick, { once: true });
             
-            // --- [추가] 볼륨 버튼 클릭 이벤트 ---
             volumeBtn.addEventListener('click', () => {
+                if (!musicStarted) { // [추가] 음악이 시작되지 않았다면, 볼륨 버튼으로도 시작
+                    startMusicOnClick();
+                }
+                
                 if (bgMusic.muted) {
-                    // 음소거 해제
                     bgMusic.muted = false;
                     volumeBtn.textContent = '🔊';
                 } else {
-                    // 음소거
                     bgMusic.muted = true;
                     volumeBtn.textContent = '🔇';
                 }
             });
-            // --- [추가] 끝 ---
-
 
             let board = [];
             let score = 0;
             let timerId = null;
             let remainingTime = GAME_TIME_SECONDS;
             let selectedTile = null;
-            let isProcessing = false;
+            let isProcessing = true; // [수정] 게임 시작 전에는 true
             
             let isBombActive = false;
             let bombCount = 1;
 
+            let timeBonusTimer = null; 
+
             function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
             function getRandomType() { return Math.floor(Math.random() * FACE_SVGS.length); }
 
-            function showMessage(title, text) {
+            // [수정] 메시지창 로직
+            function showMessage(title, text, buttonText) {
                 messageTitle.innerHTML = title;
                 messageText.innerHTML = text;
+                startGameBtn.textContent = buttonText; // 버튼 텍스트 변경
                 messageOverlay.style.display = 'flex';
             }
-
-            closeMessageBtn.addEventListener('click', () => {
+            
+            function hideMessage() {
                 messageOverlay.style.display = 'none';
-            });
+            }
 
+            // [수정] 게임 시작 함수
             function initGame() {
                 score = 0;
                 scoreDisplay.textContent = 0;
                 selectedTile = null;
-                isProcessing = true;
                 
+                isProcessing = true; // [수정] 1. 먼저 처리를 시작한다고 알림
+
                 if (timerId) clearInterval(timerId);
                 remainingTime = GAME_TIME_SECONDS;
                 timeDisplay.textContent = remainingTime;
                 timeDisplay.style.color = '#3498db';
-                timerId = setInterval(updateTimer, 1000);
+                // timerId = setInterval(updateTimer, 1000); // [수정] 타이머는 맨 나중에 시작
                 
                 bombCount = 1;
                 isBombActive = false;
                 bombBtn.classList.remove('active');
-                updateBombButton();
+                updateBombButton(); // [수정] 2. isProcessing=true 상태에서 버튼 업데이트 (비활성화)
 
-                createBoard();
-                renderBoard();
-                isProcessing = false;
+                createBoard(); // [수정] 3. 보드 데이터 생성
+                
+                isProcessing = false; // [수정] 4. 렌더링 직전에 조작 허용
+                renderBoard(); // [수정] 5. 보드를 그림 (이제 isProcessing=false이므로 보임)
+                
+                updateBombButton(); // [수정] 6. isProcessing=false 상태로 버튼 다시 업데이트 (활성화)
+                
+                timerId = setInterval(updateTimer, 1000); // [수정] 7. 모든 준비가 끝나고 타이머 시작
             }
 
             function updateTimer() {
@@ -416,14 +454,15 @@
                     clearInterval(timerId);
                     isProcessing = true;
                     timeDisplay.textContent = '0';
-                    showMessage('GAME OVER', `YOU ARE AN IDIOT!<br>FINAL SCORE: ${score}`);
+                    // [수정] 게임 오버 메시지
+                    showMessage('GAME OVER', `YOU ARE AN IDIOT!<br>FINAL SCORE: ${score}`, 'PLAY AGAIN');
                     updateBombButton();
                 }
             }
 
             function updateBombButton() {
                 bombBtn.textContent = `💣 ERROR BOMB (${bombCount})`;
-                bombBtn.disabled = (remainingTime <= 0 || isProcessing || bombCount <= 0);
+                bombBtn.disabled = (isProcessing || bombCount <= 0); // [수정] isProcessing으로 통일
             }
 
             function createBoard() {
@@ -446,6 +485,7 @@
 
             function renderBoard() {
                 gameBoard.innerHTML = '';
+                gameBoard.style.backgroundColor = '#000'; // [수정] 항상 검은색 배경
                 for (let r = 0; r < ROWS; r++) {
                     for (let c = 0; c < COLS; c++) {
                         const tile = document.createElement('div');
@@ -453,18 +493,27 @@
                         tile.dataset.row = r;
                         tile.dataset.col = c;
                         
-                        const typeIdx = board[r][c];
-                        if (typeIdx !== null && typeIdx !== -1) {
-                            tile.innerHTML = FACE_SVGS[typeIdx];
-                            
-                            if (typeIdx === 1 || typeIdx === 3) {
-                                tile.style.backgroundColor = 'black';
-                            } else if (typeIdx === 5) {
-                                tile.style.backgroundColor = '#300';
+                        // [수정] isProcessing 체크를 완전히 제거하고,
+                        // board 배열이 실제로 데이터(board[r])를 가지고 있는지 확인합니다.
+                        if (board[r] && board[r][c] !== undefined) {
+                            const typeIdx = board[r][c];
+                        
+                            if (typeIdx !== null && typeIdx !== -1) {
+                                tile.innerHTML = FACE_SVGS[typeIdx];
+                                
+                                if (typeIdx === 1 || typeIdx === 3) {
+                                    tile.style.backgroundColor = 'black';
+                                } else if (typeIdx === 5) {
+                                    tile.style.backgroundColor = '#300';
+                                } else {
+                                    tile.style.backgroundColor = 'white';
+                                }
                             } else {
-                                tile.style.backgroundColor = 'white';
+                                // typeIdx가 null이면 (비어있으면) 숨김
+                                tile.style.visibility = 'hidden';
                             }
                         } else {
+                            // board[r]이 없거나 board[r][c]가 undefined이면 (게임 시작 전) 숨김
                             tile.style.visibility = 'hidden';
                         }
                         
@@ -475,7 +524,7 @@
             }
 
             async function handleTileClick(e) {
-                if (isProcessing || remainingTime <= 0) return;
+                if (isProcessing) return; // [수정] isProcessing이 true면 모든 동작 중지
 
                 const clickedTile = e.currentTarget;
                 const r = parseInt(clickedTile.dataset.row);
@@ -536,7 +585,10 @@
                     board[r2][c2] = temp;
                     renderBoard();
                 }
-                isProcessing = false;
+                // [수정] 타이머가 0 이상일 때만 isProcessing 해제
+                if (remainingTime > 0) {
+                    isProcessing = false;
+                }
                 updateBombButton();
             }
 
@@ -553,7 +605,11 @@
                     }
                 }
                 if (targets.length > 0) await handleMatches(targets);
-                isProcessing = false;
+                
+                // [수정] 타이머가 0 이상일 때만 isProcessing 해제
+                if (remainingTime > 0) {
+                    isProcessing = false;
+                }
                 updateBombButton();
             }
 
@@ -561,6 +617,24 @@
                 while (matches.length > 0) {
                     score += matches.length * SCORE_PER_MATCH;
                     scoreDisplay.textContent = score;
+
+                    let timeBonus = 0;
+                    if (matches.length === 3) timeBonus = 2; /* [수정] 1초 -> 2초 */
+                    else if (matches.length === 4) timeBonus = 3; 
+                    else if (matches.length >= 5) timeBonus = 5; 
+
+                    if (timeBonus > 0) {
+                        remainingTime += timeBonus;
+                        timeDisplay.textContent = remainingTime;
+                        if (timeBonusTimer) clearTimeout(timeBonusTimer);
+                        timeDisplay.classList.add('bonus');
+                        timeBonusTimer = setTimeout(() => {
+                            timeDisplay.classList.remove('bonus');
+                        }, 500);
+                        if (remainingTime > 10) {
+                            timeDisplay.style.color = '#3498db';
+                        }
+                    }
 
                     if (matches.length > 0) {
                          const center = matches[Math.floor(matches.length/2)];
@@ -661,15 +735,17 @@
                 });
             }
 
-            resetBtn.addEventListener('click', () => {
-                if (messageOverlay.style.display === 'flex') {
-                    messageOverlay.style.display = 'none';
-                }
+            // [수정] 시작/재시작 버튼 이벤트
+            function handleStartGame() {
+                hideMessage();
                 initGame();
-            });
+            }
+
+            startGameBtn.addEventListener('click', handleStartGame);
+            resetBtn.addEventListener('click', handleStartGame); // 리셋 버튼도 동일하게 동작
 
             bombBtn.addEventListener('click', () => {
-                if (isProcessing || bombCount <= 0 || remainingTime <= 0) return;
+                if (isProcessing) return; // [수정]
                 isBombActive = !isBombActive;
                 if (isBombActive) {
                     bombBtn.classList.add('active');
@@ -682,7 +758,11 @@
                 }
             });
 
-            initGame();
+            // [수정] 페이지 로드 시 바로 initGame() 대신, 시작 화면 표시
+            // initGame(); 
+            // renderBoard(); // [수정] 이 줄을 주석 처리하거나 삭제합니다.
+            gameBoard.style.backgroundColor = '#000'; // [추가] 보드 배경만 검게 설정
+            showMessage('ARE YOU AN IDIOT?', 'PRESS START TO PROVE IT.', 'START GAME');
         });
     </script>
 </body>
