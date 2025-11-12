@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You are an idiot Match</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a1a; /* 원작 느낌의 어두운 배경 */
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #333;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+            width: 90vw;
+            max-width: 500px;
+            position: relative;
+        }
+
+        /* 깜빡이는 효과 (원작 고증) */
+        @keyframes flash-border {
+            0%, 100% { border-color: #ffffff; }
+            50% { border-color: #000000; }
+        }
+
+        .header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #fff;
+            margin: 0;
+            text-transform: uppercase;
+            text-align: left;
+            line-height: 1.2;
+        }
+
+        .stats-group {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            flex-grow: 1;
+        }
+
+        .score-board {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #000;
+            padding: 6px 12px;
+            border-radius: 8px;
+            min-width: 50px;
+            border: 1px solid #555;
+        }
+
+        .score-board span:first-child {
+            font-size: 0.7rem;
+            color: #aaa;
+        }
+
+        #score, #time {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        #score { color: #f1c40f; }
+        #time { color: #3498db; }
+
+        #reset-btn {
+            background-color: #fff;
+            color: black;
+            border: 2px solid black;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        #reset-btn:hover { background-color: #ddd; }
+
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: calc(min(85vw, 450px));
+            height: calc(min(85vw, 450px));
+            background-color: #000;
+            border: 4px solid #fff;
+            border-radius: 4px;
+            padding: 2px;
+            box-sizing: border-box;
+            gap: 2px;
+        }
+
+        .tile {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #fff; /* 기본 흰색 배경 */
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* SVG 스타일링 */
+        .tile svg {
+            width: 85%;
+            height: 85%;
+            display: block;
+        }
+
+        .tile.selected {
+            background-color: #ff00ff; /* 선택 시 현란한 색 */
+            animation: flash-bg 0.2s infinite;
+        }
+
+        @keyframes flash-bg {
+            0% { background-color: #ff00ff; }
+            50% { background-color: #00ffff; }
+            100% { background-color: #ff00ff; }
+        }
+
+        .tile.matched {
+            animation: pop 0.5s ease forwards;
+        }
+
+        /* HAHAHA 텍스트 효과 */
+        .haha-effect {
+            position: absolute;
+            color: red;
+            font-weight: 900;
+            font-size: 1.2rem;
+            pointer-events: none;
+            animation: floatUp 0.8s ease-out forwards;
+            z-index: 10;
+            text-shadow: 2px 2px 0px white;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-30px) scale(1.5); opacity: 0; }
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2) rotate(10deg); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        /* 아이템 버튼 스타일 */
+        .item-container {
+            margin-top: 15px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .item-btn {
+            background-color: #000;
+            color: #fff;
+            border: 2px solid #fff;
+            padding: 10px 20px;
+            border-radius: 0;
+            font-family: 'Inter', sans-serif;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .item-btn.active {
+            background-color: red;
+            color: yellow;
+            border-color: yellow;
+            animation: shake 0.2s infinite;
+        }
+
+        .item-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            animation: none;
+        }
+
+        /* 메시지 오버레이 */
+        #message-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            border-radius: 20px;
+        }
+
+        .message-box {
+            background-color: white;
+            color: black;
+            padding: 30px;
+            text-align: center;
+            border: 4px solid black;
+            width: 80%;
+        }
+
+        .message-box h2 {
+            font-size: 2rem;
+            margin: 0 0 10px 0;
+            font-weight: 900;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <div class="header">
+            <h1>You are<br>an idiot</h1>
+            <div class="stats-group">
+                <div class="score-board">
+                    <span>TIME</span>
+                    <span id="time">60</span>
+                </div>
+                <div class="score-board">
+                    <span>SCORE</span>
+                    <span id="score">0</span>
+                </div>
+            </div>
+            <button id="reset-btn">RESET</button>
+        </div>
+        
+        <div id="game-board"></div>
+        
+        <div class="item-container">
+            <button class="item-btn" id="bomb-btn">💣 ERROR BOMB (1)</button>
+        </div>
+
+        <div id="message-overlay">
+            <div class="message-box">
+                <h2 id="message-title">HAHAHA</h2>
+                <p id="message-text">YOU ARE AN IDIOT!</p>
+                <button id="close-message" style="margin-top:15px; padding:10px 20px; background:black; color:white; border:none; font-weight:bold; cursor:pointer;">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- === [추가] 배경 음악 === -->
+    <!-- 
+      1. 이 HTML 파일과 *같은 폴더*에 mp3 파일을 업로드하세요.
+      2. "your_music.mp3" 부분을 실제 파일명으로 정확히 변경하세요.
+      3. loop: 음악을 무한 반복합니다.
+      4. preload="auto": 페이지 로드 시 음악 파일을 미리 불러옵니다.
+    -->
+    <audio id="bg-music" src="Pandemonium.mp3" loop preload="auto"></audio>
+    <!-- === [추가] 끝 === -->
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const ROWS = 8;
+            const COLS = 8;
+            const SCORE_PER_MATCH = 100; // 점수 단위 상승
+            const GAME_TIME_SECONDS = 60;
+
+            // --- SVG Assets: The "Idiot" Faces ---
+            // 밈 특유의 대충 그린듯한 그림체 구현
+            const FACE_SVGS = [
+                // 1. Classic (White face, black stroke)
+                `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="white" stroke="black" stroke-width="5"/><circle cx="35" cy="35" r="5" fill="black"/><circle cx="65" cy="35" r="5" fill="black"/><path d="M 30 65 Q 50 85 70 65" stroke="black" stroke-width="5" fill="none"/></svg>`,
+                
+                // 2. Inverted (Black face, white stroke)
+                `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="black" stroke="white" stroke-width="5"/><circle cx="35" cy="35" r="5" fill="white"/><circle cx="65" cy="35" r="5" fill="white"/><path d="M 30 65 Q 50 85 70 65" stroke="white" stroke-width="5" fill="none"/></svg>`,
+                
+                // 3. Singing/Open Mouth (White face)
+                `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="white" stroke="black" stroke-width="5"/><circle cx="35" cy="35" r="5" fill="black"/><circle cx="65" cy="35" r="5" fill="black"/><ellipse cx="50" cy="70" rx="15" ry="10" fill="black"/></svg>`,
+                
+                // 4. Singing Inverted (Black face)
+                `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="black" stroke="white" stroke-width="5"/><circle cx="35" cy="35" r="5" fill="white"/><circle cx="65" cy="35" r="5" fill="white"/><ellipse cx="50" cy="70" rx="15" ry="10" fill="white"/></svg>`,
+
+                // 5. Dead/X-Eyes (White face)
+                `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="white" stroke="black" stroke-width="5"/><path d="M 25 25 L 45 45 M 45 25 L 25 45" stroke="black" stroke-width="4"/><path d="M 55 25 L 75 45 M 75 25 L 55 45" stroke="black" stroke-width="4"/><path d="M 30 70 Q 50 60 70 70" stroke="black" stroke-width="5" fill="none"/></svg>`,
+
+                // 6. Angry/Red (Red face)
+                `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#ff3333" stroke="black" stroke-width="5"/><path d="M 30 30 L 45 40" stroke="black" stroke-width="4"/><path d="M 70 30 L 55 40" stroke="black" stroke-width="4"/><circle cx="35" cy="45" r="4" fill="black"/><circle cx="65" cy="45" r="4" fill="black"/><path d="M 35 75 Q 50 65 65 75" stroke="black" stroke-width="5" fill="none"/></svg>`
+            ];
+
+            const gameBoard = document.getElementById('game-board');
+            const scoreDisplay = document.getElementById('score');
+            const timeDisplay = document.getElementById('time');
+            const resetBtn = document.getElementById('reset-btn');
+            const messageOverlay = document.getElementById('message-overlay');
+            const messageTitle = document.getElementById('message-title');
+            const messageText = document.getElementById('message-text');
+            const closeMessageBtn = document.getElementById('close-message');
+            const bombBtn = document.getElementById('bomb-btn');
+
+            // === [추가] 음악 재생 로직 ===
+            const bgMusic = document.getElementById('bg-music');
+
+            function startMusicOnClick() {
+                // play()는 사용자의 상호작용(클릭)이 있어야만 성공합니다.
+                // 이 함수는 '첫 클릭'에만 호출되므로 성공할 것입니다.
+                if (bgMusic) {
+                    bgMusic.play().catch(e => console.log("음악 재생이 차단되었습니다:", e));
+                }
+            }
+            
+            // 'once: true' 옵션이 핵심입니다.
+            // body(페이지 전체)에서 'click' 이벤트가 *단 한 번* 발생하면
+            // startMusicOnClick 함수를 실행하고, 그 후 이 리스너는 자동 제거됩니다.
+            document.body.addEventListener('click', startMusicOnClick, { once: true });
+            // === [추가] 끝 ===
+
+
+            let board = []; // Stores indices (0-5) now, not emojis
+            let score = 0;
+            let timerId = null;
+            let remainingTime = GAME_TIME_SECONDS;
+            let selectedTile = null;
+            let isProcessing = false;
+            
+            let isBombActive = false;
+            let bombCount = 1;
+
+            function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+            function getRandomType() { return Math.floor(Math.random() * FACE_SVGS.length); }
+
+            function showMessage(title, text) {
+                messageTitle.innerHTML = title; // HTML 허용 (줄바꿈 등)
+                messageText.innerHTML = text;
+                messageOverlay.style.display = 'flex';
+            }
+
+            closeMessageBtn.addEventListener('click', () => {
+                messageOverlay.style.display = 'none';
+            });
+
+            function initGame() {
+                score = 0;
+                scoreDisplay.textContent = 0;
+                selectedTile = null;
+                isProcessing = true;
+                
+                if (timerId) clearInterval(timerId);
+                remainingTime = GAME_TIME_SECONDS;
+                timeDisplay.textContent = remainingTime;
+                timeDisplay.style.color = '#3498db';
+                timerId = setInterval(updateTimer, 1000);
+                
+                bombCount = 1;
+                isBombActive = false;
+                bombBtn.classList.remove('active');
+                updateBombButton();
+
+                createBoard();
+                renderBoard();
+                isProcessing = false;
+            }
+
+            function updateTimer() {
+                remainingTime--;
+                timeDisplay.textContent = remainingTime;
+                if (remainingTime <= 10) timeDisplay.style.color = 'red';
+                
+                // 배경 깜빡임 효과 (시간 얼마 안 남았을 때)
+                if (remainingTime <= 10 && remainingTime > 0) {
+                    document.body.style.backgroundColor = (remainingTime % 2 === 0) ? '#1a1a1a' : '#330000';
+                } else if (remainingTime <= 0) {
+                    document.body.style.backgroundColor = '#1a1a1a';
+                    clearInterval(timerId);
+                    isProcessing = true;
+                    timeDisplay.textContent = '0';
+                    showMessage('GAME OVER', `YOU ARE AN IDIOT!<br>FINAL SCORE: ${score}`);
+                    updateBombButton();
+                }
+            }
+
+            function updateBombButton() {
+                bombBtn.textContent = `💣 ERROR BOMB (${bombCount})`;
+                bombBtn.disabled = (remainingTime <= 0 || isProcessing || bombCount <= 0);
+            }
+
+            function createBoard() {
+                board = [];
+                for (let r = 0; r < ROWS; r++) {
+                    const row = [];
+                    for (let c = 0; c < COLS; c++) {
+                        row.push(getRandomType());
+                    }
+                    board.push(row);
+                }
+                // 초기 매치 제거
+                let matches = findMatches();
+                while (matches.length > 0) {
+                    removeMatchesFromBoard(matches);
+                    shiftDown();
+                    fillBoard();
+                    matches = findMatches();
+                }
+            }
+
+            function renderBoard() {
+                gameBoard.innerHTML = '';
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        const tile = document.createElement('div');
+                        tile.classList.add('tile');
+                        tile.dataset.row = r;
+                        tile.dataset.col = c;
+                        
+                        const typeIdx = board[r][c];
+                        if (typeIdx !== null && typeIdx !== -1) {
+                            tile.innerHTML = FACE_SVGS[typeIdx];
+                            
+                            // 반전된 얼굴(인덱스 1, 3, 5 등)은 배경을 검게 처리하여 대비 효과
+                            if (typeIdx === 1 || typeIdx === 3) {
+                                tile.style.backgroundColor = 'black';
+                            } else if (typeIdx === 5) {
+                                tile.style.backgroundColor = '#300';
+                            } else {
+                                tile.style.backgroundColor = 'white';
+                            }
+                        } else {
+                            tile.style.visibility = 'hidden';
+                        }
+                        
+                        tile.addEventListener('click', handleTileClick);
+                        gameBoard.appendChild(tile);
+                    }
+                }
+            }
+
+            async function handleTileClick(e) {
+                if (isProcessing || remainingTime <= 0) return;
+
+                const clickedTile = e.currentTarget;
+                const r = parseInt(clickedTile.dataset.row);
+                const c = parseInt(clickedTile.dataset.col);
+
+                if (board[r][c] === null) return;
+
+                // 폭탄 로직
+                if (isBombActive) {
+                    isBombActive = false;
+                    bombBtn.classList.remove('active');
+                    bombCount--;
+                    await useBomb(r, c);
+                    return;
+                }
+
+                if (!selectedTile) {
+                    selectedTile = { r, c, el: clickedTile };
+                    clickedTile.classList.add('selected');
+                } else {
+                    const prevR = selectedTile.r;
+                    const prevC = selectedTile.c;
+                    
+                    if (prevR === r && prevC === c) {
+                        selectedTile.el.classList.remove('selected');
+                        selectedTile = null;
+                        return;
+                    }
+
+                    if (Math.abs(prevR - r) + Math.abs(prevC - c) === 1) {
+                        selectedTile.el.classList.remove('selected');
+                        await performSwap(prevR, prevC, r, c);
+                        selectedTile = null;
+                    } else {
+                        selectedTile.el.classList.remove('selected');
+                        selectedTile = { r, c, el: clickedTile };
+                        clickedTile.classList.add('selected');
+                    }
+                }
+            }
+
+            async function performSwap(r1, c1, r2, c2) {
+                isProcessing = true;
+                updateBombButton();
+
+                // Swap logic
+                let temp = board[r1][c1];
+                board[r1][c1] = board[r2][c2];
+                board[r2][c2] = temp;
+                
+                renderBoard();
+                await sleep(150);
+
+                let matches = findMatches();
+                if (matches.length > 0) {
+                    await handleMatches(matches);
+                } else {
+                    // Undo swap
+                    temp = board[r1][c1];
+                    board[r1][c1] = board[r2][c2];
+                    board[r2][c2] = temp;
+                    renderBoard();
+                }
+                isProcessing = false;
+                updateBombButton();
+            }
+
+            async function useBomb(r, c) {
+                isProcessing = true;
+                updateBombButton();
+                
+                let targets = [];
+                for (let i = r-1; i <= r+1; i++) {
+                    for (let j = c-1; j <= c+1; j++) {
+                        if (i >= 0 && i < ROWS && j >= 0 && j < COLS) {
+                            targets.push({r: i, c: j});
+                        }
+                    }
+                }
+                if (targets.length > 0) await handleMatches(targets);
+                isProcessing = false;
+                updateBombButton();
+            }
+
+            async function handleMatches(matches) {
+                while (matches.length > 0) {
+                    score += matches.length * SCORE_PER_MATCH;
+                    scoreDisplay.textContent = score;
+
+                    // Show HAHAHA effect on match center
+                    if (matches.length > 0) {
+                         const center = matches[Math.floor(matches.length/2)];
+                         showHahaEffect(center.r, center.c);
+                    }
+
+                    // Remove logic
+                    for (let m of matches) {
+                        const tile = document.querySelector(`.tile[data-row="${m.r}"][data-col="${m.c}"]`);
+                        if (tile) tile.classList.add('matched');
+                    }
+                    await sleep(400);
+
+                    removeMatchesFromBoard(matches);
+                    shiftDown();
+                    renderBoard(); // Render after shift to show empty top
+                    await sleep(200);
+                    
+                    fillBoard();
+                    renderBoard(); // Render new items
+                    await sleep(200);
+
+                    matches = findMatches();
+                }
+            }
+
+            function showHahaEffect(r, c) {
+                const tile = document.querySelector(`.tile[data-row="${r}"][data-col="${c}"]`);
+                if (!tile) return;
+                
+                const haha = document.createElement('div');
+                haha.textContent = "HAHAHA";
+                haha.classList.add('haha-effect');
+                tile.appendChild(haha);
+                
+                // Clean up DOM
+                setTimeout(() => { if(haha.parentNode) haha.parentNode.removeChild(haha); }, 1000);
+            }
+
+            function removeMatchesFromBoard(matches) {
+                for (let m of matches) board[m.r][m.c] = null;
+            }
+
+            function shiftDown() {
+                for (let c = 0; c < COLS; c++) {
+                    let write = ROWS - 1;
+                    for (let r = ROWS - 1; r >= 0; r--) {
+                        if (board[r][c] !== null) {
+                            board[write][c] = board[r][c];
+                            if (write !== r) board[r][c] = null;
+                            write--;
+                        }
+                    }
+                }
+            }
+
+            function fillBoard() {
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        if (board[r][c] === null) board[r][c] = getRandomType();
+                    }
+                }
+            }
+
+            function findMatches() {
+                let matchedSet = new Set();
+                // Horizontal
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS - 2; c++) {
+                        let type = board[r][c];
+                        if (type === null) continue;
+                        if (type === board[r][c+1] && type === board[r][c+2]) {
+                            let k = 0;
+                            while (c + k < COLS && board[r][c+k] === type) {
+                                matchedSet.add(`${r},${c+k}`);
+                                k++;
+                            }
+                            c += k - 1;
+                        }
+                    }
+                }
+                // Vertical
+                for (let c = 0; c < COLS; c++) {
+                    for (let r = 0; r < ROWS - 2; r++) {
+                        let type = board[r][c];
+                        if (type === null) continue;
+                        if (type === board[r+1][c] && type === board[r+2][c]) {
+                            let k = 0;
+                            while (r + k < ROWS && board[r+k][c] === type) {
+                                matchedSet.add(`${r+k},${c}`);
+                                k++;
+                            }
+                            r += k - 1;
+                        }
+                    }
+                }
+                return Array.from(matchedSet).map(str => {
+                    const [r, c] = str.split(',').map(Number);
+                    return {r, c};
+                });
+            }
+
+            resetBtn.addEventListener('click', () => {
+                if (messageOverlay.style.display === 'flex') {
+                    messageOverlay.style.display = 'none';
+                }
+                initGame();
+            });
+
+            bombBtn.addEventListener('click', () => {
+                if (isProcessing || bombCount <= 0 || remainingTime <= 0) return;
+                isBombActive = !isBombActive;
+                if (isBombActive) {
+                    bombBtn.classList.add('active');
+                    if (selectedTile) {
+                        selectedTile.el.classList.remove('selected');
+                        selectedTile = null;
+                    }
+                } else {
+                    bombBtn.classList.remove('active');
+                }
+            });
+
+            initGame();
+        });
+    </script>
+</body>
+</html>
